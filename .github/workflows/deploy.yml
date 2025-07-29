@@ -22,7 +22,7 @@ jobs:
       run: |
         echo "Current directory: $(pwd)"
         ls -la
-        mvn clean package
+        find . -name "pom.xml"
 
     - name: Zip Deployment Package
       run: |
