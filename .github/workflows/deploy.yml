@@ -1,0 +1,44 @@
+name: Deploy Spring Boot App to EC2 using CodeDeploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build with Maven
+      run: mvn clean package
+
+    - name: Zip Deployment Package
+      run: |
+        zip -r spring-boot-app.zip target/*.jar appspec.yml aws/scripts
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    - name: Upload to S3
+      run: aws s3 cp spring-boot-app.zip s3://YOUR_S3_BUCKET_NAME/spring-boot-app.zip
+
+    - name: Deploy to EC2 via CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --application-name YOUR_CODEDEPLOY_APP_NAME \
+          --deployment-group-name YOUR_DEPLOYMENT_GROUP_NAME \
+          --s3-location bucket=YOUR_S3_BUCKET_NAME,bundleType=zip,key=spring-boot-app.zip \
+          --region ap-south-1
