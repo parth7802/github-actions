@@ -19,7 +19,10 @@ jobs:
         java-version: '17'
 
     - name: Build with Maven
-      run: mvn clean package
+      run: |
+        echo "Current directory: $(pwd)"
+        ls -la
+        mvn clean package
 
     - name: Zip Deployment Package
       run: |
