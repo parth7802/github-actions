@@ -1,47 +1,66 @@
-name: Deploy Spring Boot App to EC2 using CodeDeploy
+name: CI/CD Pipeline with Lint + Manual Approval + Deploy
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  lint:
+    name: Super-Linter
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Run Super-Linter
+        uses: github/super-linter@v5
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build with Maven
-      run: |
-        echo "Current directory: $(pwd)"
-        ls -la
-        find . -name "pom.xml"
+  deploy:
+    name: Manual Approval & Deploy
+    needs: lint
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://aws.amazon.com/codedeploy/
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Zip Deployment Package
-      run: |
-        zip -r spring-boot-app.zip target/*.jar appspec.yml aws/scripts
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-south-1
+      - name: Build with Maven
+        run: mvn clean package
 
-    - name: Upload to S3
-      run: aws s3 cp spring-boot-app.zip s3://destination-bucket-modi68/spring-boot-app.zip
+      - name: Package App
+        run: |
+          mkdir -p build
+          cp target/*.war build/
+          cp -r aws/scripts build/scripts
+          cp appspec.yml build/
+          cd build && zip -r spring-boot-app.zip *
 
-    - name: Deploy to EC2 via CodeDeploy
-      run: |
-        aws deploy create-deployment \
-          --application-name demo-app-name \
-          --deployment-group-name demo-deploy-group \
-          --s3-location bucket=destination-bucket-modi68,bundleType=zip,key=spring-boot-app.zip \
-          --region ap-south-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Upload to S3
+        run: aws s3 cp build/spring-boot-app.zip s3://destination-bucket-modi68/spring-boot-app.zip
+
+      - name: Deploy to EC2 via CodeDeploy
+        run: |
+          aws deploy create-deployment \
+            --application-name demo-app-name \
+            --deployment-group-name demo-deploy-group \
+            --s3-location bucket=destination-bucket-modi68,bundleType=zip,key=spring-boot-app.zip \
+            --region ap-south-1
