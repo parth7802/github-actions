@@ -41,7 +41,7 @@ jobs:
     - name: Deploy to EC2 via CodeDeploy
       run: |
         aws deploy create-deployment \
-          --application-name YOUR_CODEDEPLOY_APP_NAME \
-          --deployment-group-name YOUR_DEPLOYMENT_GROUP_NAME \
-          --s3-location bucket=YOUR_S3_BUCKET_NAME,bundleType=zip,key=spring-boot-app.zip \
+          --application-name demo-app-name \
+          --deployment-group-name demo-deploy-group \
+          --s3-location bucket=destination-bucket-modi68,bundleType=zip,key=spring-boot-app.zip \
           --region ap-south-1
