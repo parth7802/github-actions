@@ -36,7 +36,7 @@ jobs:
         aws-region: ap-south-1
 
     - name: Upload to S3
-      run: aws s3 cp spring-boot-app.zip s3://YOUR_S3_BUCKET_NAME/spring-boot-app.zip
+      run: aws s3 cp spring-boot-app.zip s3://destination-bucket-modi68/spring-boot-app.zip
 
     - name: Deploy to EC2 via CodeDeploy
       run: |
