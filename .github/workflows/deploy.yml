@@ -1,33 +1,53 @@
-name: CI/CD Pipeline with Lint + Manual Approval + Deploy
+name: Deploy Spring Boot App to EC2 using CodeDeploy
 
 on:
   push:
     branches: [ main ]
 
 jobs:
+  # -------------------------------------
+  # ✅ Step 1: Run Super-Linter
+  # -------------------------------------
   lint:
-    name: Super-Linter
+    name: Super-Linter Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Pre-pull Super-Linter image
+        run: docker pull github/super-linter:slim-v5
+
       - name: Run Super-Linter
-        uses: github/super-linter@v5
+        uses: github/super-linter/slim@v5
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy:
-    name: Manual Approval & Deploy
-    needs: lint
+  # -------------------------------------
+  # ✅ Step 2: Wait for Manual Approval
+  # -------------------------------------
+  approval:
+    name: Manual Approval
     runs-on: ubuntu-latest
+    needs: lint
     environment:
-      name: production
-      url: https://aws.amazon.com/codedeploy/
+      name: production   # Requires manual approval in GitHub UI
     steps:
-      - name: Checkout Code
+      - name: Approval Step
+        run: echo "Manual approval completed. Proceeding with deployment."
+
+  # -------------------------------------
+  # ✅ Step 3: Build & Deploy to EC2
+  # -------------------------------------
+  deploy:
+    name: Build and Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: approval
+
+    steps:
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Set up Java
@@ -37,12 +57,16 @@ jobs:
           java-version: '17'
 
       - name: Build with Maven
-        run: mvn clean package
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -la
+          find . -name "pom.xml"
+          mvn clean package
 
-      - name: Package App
+      - name: Zip Deployment Package
         run: |
           mkdir -p build
-          cp target/*.war build/
+          cp target/*.jar build/
           cp -r aws/scripts build/scripts
           cp appspec.yml build/
           cd build && zip -r spring-boot-app.zip *
