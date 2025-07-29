@@ -57,19 +57,16 @@ jobs:
           java-version: '17'
 
       - name: Build with Maven
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -la
-          find . -name "pom.xml"
-          mvn clean package
+        run: mvn clean package
+        working-directory: spring-boot-hello-world-example
 
       - name: Zip Deployment Package
         run: |
-          mkdir -p build
-          cp target/*.jar build/
-          cp -r aws/scripts build/scripts
-          cp appspec.yml build/
-          cd build && zip -r spring-boot-app.zip *
+            mkdir -p build
+            cp spring-boot-hello-world-example/target/*.jar build/
+            cp -r aws/scripts build/scripts
+            cp appspec.yml build/
+            cd build && zip -r spring-boot-app.zip *
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
