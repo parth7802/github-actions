@@ -62,11 +62,7 @@ jobs:
 
       - name: Zip Deployment Package
         run: |
-            mkdir -p build
-            cp spring-boot-hello-world-example/target/*.jar build/
-            cp -r aws/scripts build/scripts
-            cp appspec.yml build/
-            cd build && zip -r spring-boot-app.zip *
+            zip -r spring-boot-app.zip target/*.jar appspec.yml aws/scripts
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
